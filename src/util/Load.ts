@@ -10,14 +10,7 @@ import { Config } from '../interface/Config'
 
 export function loadAccounts(): Account[] {
     try {
-        let file = 'accounts.json'
-
-        // If dev mode, use dev account(s)
-        if (process.argv.includes('-dev')) {
-            file = 'accounts.dev.json'
-        }
-
-        const accountDir = path.join(__dirname, '../', file)
+        const accountDir = path.resolve(process.env.ACCOUNTS_PATH || path.resolve('./accounts.json'))
         const accounts = fs.readFileSync(accountDir, 'utf-8')
 
         return JSON.parse(accounts)
@@ -28,7 +21,7 @@ export function loadAccounts(): Account[] {
 
 export function loadConfig(): Config {
     try {
-        const configDir = path.join(__dirname, '../', 'config.json')
+        const configDir = process.env.CONFIG_PATH || path.resolve('./config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
 
         return JSON.parse(config)
