@@ -1,4 +1,4 @@
-import cluster from 'cluster'
+import cluster from 'node:cluster'
 import { BrowserContext, Page } from 'playwright'
 
 import Browser from './browser/Browser'

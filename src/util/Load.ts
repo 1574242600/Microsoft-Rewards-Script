@@ -9,10 +9,12 @@ import { Config } from '../interface/Config'
 
 
 export function loadAccounts(): Account[] {
+    //todo 单例模式
     try {
         const accountDir = path.resolve(process.env.ACCOUNTS_PATH || path.resolve('./accounts.json'))
         const accounts = fs.readFileSync(accountDir, 'utf-8')
 
+        
         return JSON.parse(accounts)
     } catch (error) {
         throw new Error(error as string)
@@ -24,6 +26,7 @@ export function loadConfig(): Config {
         const configDir = process.env.CONFIG_PATH || path.resolve('./config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
 
+        
         return JSON.parse(config)
     } catch (error) {
         throw new Error(error as string)
