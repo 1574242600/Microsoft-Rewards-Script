@@ -1,5 +1,3 @@
-import axios from 'axios'
-
 import { log } from './Logger'
 
 import { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
@@ -38,16 +36,16 @@ export async function getUserAgent(mobile: boolean) {
 
 export async function getChromeVersion(): Promise<string> {
     try {
+        const url = 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json'
         const request = {
-            url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         }
 
-        const response = await axios(request)
-        const data: ChromeVersion = response.data
+        const response = await fetch(url, request)
+        const data: ChromeVersion = await response.json()
         return data.channels.Stable.version
 
     } catch (error) {
@@ -57,16 +55,16 @@ export async function getChromeVersion(): Promise<string> {
 
 export async function getEdgeVersions() {
     try {
+        const url = 'https://edgeupdates.microsoft.com/api/products'
         const request = {
-            url: 'https://edgeupdates.microsoft.com/api/products',
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         }
 
-        const response = await axios(request)
-        const data: EdgeVersion[] = response.data
+        const response = await fetch(url, request)
+        const data: EdgeVersion[] = await (response.json())
         const stable = data.find(x => x.Product == 'Stable') as EdgeVersion
         return {
             android: stable.Releases.find(x => x.Platform == 'Android')?.ProductVersion,

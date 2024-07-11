@@ -1,5 +1,4 @@
 import { Page } from 'playwright'
-import axios from 'axios'
 import { platform } from 'os'
 
 import { Workers } from '../Workers'
@@ -27,21 +26,27 @@ export class Search extends Workers {
         }
 
         // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country, missingPoints)
-        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+        // let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country, missingPoints)
+        // googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
 
-        // Deduplicate the search terms
-        googleSearchQueries = [...new Set(googleSearchQueries)]
+        // // Deduplicate the search terms
+        // googleSearchQueries = [...new Set(googleSearchQueries)]
 
-        // Go to bing
-        await page.goto(this.searchPageURL)
+        // // Go to bing
+        // await page.goto(this.searchPageURL)
+
+        // const queries: string[] = []
+        // // Mobile search doesn't seem to like related queries?
+        // googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
+
+        const queries = ["盛年不重来，一日难再晨", "千里之行，始于足下", "少年易学老难成，一寸光阴不可轻", "敏而好学，不耻下问", "海内存知已，天涯若比邻","三人行，必有我师焉",
+    "莫愁前路无知已，天下谁人不识君", "人生贵相知，何用金与钱", "天生我材必有用", "海纳百川有容乃大；壁立千仞无欲则刚", "穷则独善其身，达则兼济天下", "读书破万卷，下笔如有神",
+    "学而不思则罔，思而不学则殆", "一年之计在于春，一日之计在于晨", "莫等闲，白了少年头，空悲切", "少壮不努力，老大徒伤悲", "一寸光阴一寸金，寸金难买寸光阴","近朱者赤，近墨者黑",
+    "吾生也有涯，而知也无涯", "纸上得来终觉浅，绝知此事要躬行", "学无止境", "己所不欲，勿施于人", "天将降大任于斯人也", "鞠躬尽瘁，死而后已", "书到用时方恨少","天下兴亡，匹夫有责",
+    "人无远虑，必有近忧","为中华之崛起而读书","一日无书，百事荒废","岂能尽如人意，但求无愧我心","人生自古谁无死，留取丹心照汗青","吾生也有涯，而知也无涯","生于忧患，死于安乐",
+    "言必信，行必果","读书破万卷，下笔如有神","夫君子之行，静以修身，俭以养德","老骥伏枥，志在千里","一日不读书，胸臆无佳想","王侯将相宁有种乎","淡泊以明志。宁静而致远,","卧龙跃马终黄土"]
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
-
-        const queries: string[] = []
-        // Mobile search doesn't seem to like related queries?
-        googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
-
         // Loop over Google search queries
         for (let i = 0; i < queries.length; i++) {
             const query = queries[i] as string
@@ -204,17 +209,17 @@ export class Search extends Workers {
             const formattedDate = this.formatDate(date)
 
             try {
+                const url = `https://trends.google.com/trends/api/dailytrends?geo=${geoLocale}&hl=en&ed=${formattedDate}&ns=15`
                 const request = {
-                    url: `https://trends.google.com/trends/api/dailytrends?geo=${geoLocale}&hl=en&ed=${formattedDate}&ns=15`,
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 }
 
-                const response = await axios(request)
+                const response = await fetch(url, request)
 
-                const data: GoogleTrends = JSON.parse((await response.data).slice(5))
+                const data: GoogleTrends = (await response.json()).slice(5)
 
                 for (const topic of data.default.trendingSearchesDays[0]?.trendingSearches ?? []) {
                     queryTerms.push({
@@ -233,17 +238,18 @@ export class Search extends Workers {
 
     private async getRelatedTerms(term: string): Promise<string[]> {
         try {
+            const url = `https://api.bing.com/osjson.aspx?query=${term}`
+
             const request = {
-                url: `https://api.bing.com/osjson.aspx?query=${term}`,
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             }
 
-            const response = await axios(request)
+            const response = await fetch(url, request)
 
-            return response.data[1] as string[]
+            return (await response.json()).data[1] as string[]
         } catch (error) {
             this.bot.log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
         }
