@@ -11,9 +11,9 @@ export async function Webhook(content: string) {
         headers: {
             'Content-Type': 'application/json'
         },
-        data: {
+        body: JSON.stringify({
             'content': content
-        }
+        })
     }
 
     await fetch(webhook.url, request).catch(() => { })

@@ -28,7 +28,7 @@ export default class BrowserFunc {
                 return
             }
 
-            await page.goto(this.bot.config.baseURL)
+            await page.goto(this.bot.config.baseURL, { waitUntil: 'domcontentloaded' })
 
             const maxIterations = 5 // Maximum iterations set to 5
 
