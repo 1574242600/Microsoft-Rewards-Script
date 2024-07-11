@@ -35,9 +35,10 @@ export function loadConfig(): Config {
 
 export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, getFingerprint: boolean) {
     try {
+        const sessionDir = path.resolve(process.env.SESSIONS_DIR || './sessions')
         // Fetch cookie file
-        const cookieFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
-
+        const cookieFile = path.join(sessionDir, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
+        
         let cookies: Cookie[] = []
         if (fs.existsSync(cookieFile)) {
             const cookiesData = await fs.promises.readFile(cookieFile, 'utf-8')
@@ -45,7 +46,7 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
         }
 
         // Fetch fingerprint file
-        const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+        const fingerprintFile = path.join(sessionDir, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
 
         let fingerprint!: BrowserFingerprintWithHeaders
         if (getFingerprint && fs.existsSync(fingerprintFile)) {

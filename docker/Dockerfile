@@ -16,10 +16,14 @@ WORKDIR /config
 ENV NODE_ENV=production
 ENV ACCOUNTS_PATH=/config/accounts.json
 ENV CONFIG_PATH=/config/config.json
+ENV SESSIONS_DIR=/sessions
 
 RUN bunx playwright install --with-deps chromium
 
 COPY --from=builder /MRS/dist/*  /MRS/
 COPY --from=builder /MRS/node_modules/  /MRS/node_modules/
+
+VOLUME /config
+VOLUME /sessions
 
 CMD ["bun", "/MRS/index.js"]
