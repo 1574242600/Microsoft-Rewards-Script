@@ -1,7 +1,7 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
 
-const configPath = path.join(__dirname, '../dist/config.json')
+const configPath = path.join(process.env.CONFIG_PATH || './config.json')
 
 // Read the existing config file
 const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))

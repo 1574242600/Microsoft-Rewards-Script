@@ -36,5 +36,6 @@ module.exports = {
         '@typescript-eslint/comma-dangle': 'error',
         'prefer-arrow-callback': 'error'
         // Add any other rules you want to enforce here
-    }
+    },
+    'ignorePatterns': ['dist', 'node_modules']
 }

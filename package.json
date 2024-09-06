@@ -7,12 +7,11 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node ./dist/index.js",
-    "ts-start": "ts-node ./src/index.ts",
-    "dev": "ts-node ./src/index.ts -dev",
-    "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
-    "create-docker": "docker build -t microsoft-rewards-script-docker ."
+    "build": "bun build --target=node --outdir ./dist src/index.ts #--minify --sourcemap",
+    "dev": "cross-env NODE_ENV=development && bun ./src/index.ts",
+    "start": "cross-env NODE_ENV=production && bun ./src/index.ts",
+    "debug": "cross-env NODE_ENV=development && bun --inspect-brk ./src/index.ts",
+    "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\""
   },
   "keywords": [
     "Bing Rewards",
@@ -27,6 +26,8 @@
   "license": "ISC",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "cross-env": "^7.0.3",
+    "electron": "^32.0.2",
     "eslint": "^8.57.0",
     "eslint-plugin-modules-newline": "^0.0.6",
     "typescript": "^5.5.4"
@@ -36,7 +37,6 @@
     "cheerio": "^1.0.0",
     "fingerprint-generator": "^2.1.54",
     "fingerprint-injector": "^2.1.54",
-    "playwright": "^1.46.1",
-    "ts-node": "^10.9.2"
+    "playwright": "^1.46.1"
   }
 }
