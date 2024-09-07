@@ -138,7 +138,6 @@ export class Search extends Workers {
 
                 // Set it since params get added after visiting
                 this.searchPageURL = searchPage.url()
-                this.bot.log('SEARCH-BING', `Search page url: ${this.searchPageURL}`)
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'

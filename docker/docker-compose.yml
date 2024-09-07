@@ -1,0 +1,10 @@
+services:
+  microsoft-rewards-script:
+    build: .
+    environment:
+      - TZ=America/Toronto #change to your local timezone
+    restart: unless-stopped
+    volumes:
+      - ./config.json:/config/config.json
+      - ./accounts.json:/config/accounts.json
+      - ./session:/session
