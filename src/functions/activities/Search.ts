@@ -1,16 +1,11 @@
 import { Page } from 'playwright'
-import axios from 'axios'
 import { platform } from 'os'
-
 import { Workers } from '../Workers'
-
 import { Counters, DashboardData } from '../../interface/DashboardData'
-import { GoogleTrends } from '../../interface/GoogleDailyTrends'
-import { GoogleSearch } from '../../interface/Search'
-
+import axios from 'axios'
 
 export class Search extends Workers {
-    private bingHome = 'https://bing.com'
+    private bingHome = 'https://cn.bing.com'
     private searchPageURL = ''
 
     public async doSearch(page: Page, data: DashboardData) {
@@ -27,20 +22,16 @@ export class Search extends Workers {
         }
 
         // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country, missingPoints)
-        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+        let queries = await this.getTrends(data.userProfile.attributes.country)
+        queries = this.bot.utils.shuffleArray(queries)
 
         // Deduplicate the search terms
-        googleSearchQueries = [...new Set(googleSearchQueries)]
+        queries = [...new Set(queries)]
 
         // Go to bing
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
-
-        const queries: string[] = []
-        // Mobile search doesn't seem to like related queries?
-        googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
 
         await this.bot.browser.utils.tryDismissBingCookieBanner(page)
 
@@ -91,10 +82,12 @@ export class Search extends Workers {
 
             let i = 0
             while (missingPoints > 0) {
-                const query = googleSearchQueries[i++] as GoogleSearch
+                const query = queries[i++]
+
+                if (!query) return
 
                 // Get related search terms to the Google search queries
-                const relatedTerms = await this.getRelatedTerms(query?.topic)
+                const relatedTerms = await this.getRelatedTerms(query)
                 if (relatedTerms.length > 3) {
                     // Search for the first 2 related terms
                     for (const term of relatedTerms.slice(1, 3)) {
@@ -138,7 +131,6 @@ export class Search extends Workers {
             try {
                 // This page had already been set to the Bing.com page or the previous search listing, we just need to select it
                 searchPage = await this.bot.browser.utils.getLatestTab(searchPage)
-
                 // Go to top of the page
                 await searchPage.evaluate(() => {
                     window.scrollTo(0, 0)
@@ -146,11 +138,11 @@ export class Search extends Workers {
 
                 // Set it since params get added after visiting
                 this.searchPageURL = searchPage.url()
-
+                this.bot.log('SEARCH-BING', `Search page url: ${this.searchPageURL}`)
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
+                await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
                 await searchPage.keyboard.down(platformControlKey)
@@ -203,42 +195,30 @@ export class Search extends Workers {
         return await this.bot.browser.func.getSearchPoints()
     }
 
-    private async getGoogleTrends(geoLocale: string, queryCount: number): Promise<GoogleSearch[]> {
-        const queryTerms: GoogleSearch[] = []
-        let i = 0
+    private async getTrends(geoLocale: string) {
+        const queryTerms: string[] = []
+        const keywordSource = ['toutiaohot', 'baiduhot', 'zhihuhot', 'douyinhot']
+        geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'UNKONWN'
 
-        geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
+        this.bot.log('SEARCH-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
-        this.bot.log('SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
-
-        while (queryCount > queryTerms.length) {
-            i += 1
-            const date = new Date()
-            date.setDate(date.getDate() - i)
-            const formattedDate = this.formatDate(date)
-
+        for (const keyword of keywordSource) {
             try {
+                const url = `https://tenapi.cn/v2/${keyword}`
                 const request = {
-                    url: `https://trends.google.com/trends/api/dailytrends?geo=${geoLocale}&hl=en&ed=${formattedDate}&ns=15`,
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
                     }
                 }
 
-                const response = await axios(request)
-
-                const data: GoogleTrends = JSON.parse((await response.data).slice(5))
-
-                for (const topic of data.default.trendingSearchesDays[0]?.trendingSearches ?? []) {
-                    queryTerms.push({
-                        topic: topic.title.query.toLowerCase(),
-                        related: topic.relatedQueries.map(x => x.query.toLowerCase())
-                    })
-                }
-
+                const response = await axios(url, request)
+          
+                return response.data
+                    .data
+                    .map((item: { name: string }) => item.name) as string[]
             } catch (error) {
-                this.bot.log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
+                this.bot.log('SEARCH-TRENDS', 'An error occurred:' + error, 'error')
             }
         }
 
@@ -247,29 +227,22 @@ export class Search extends Workers {
 
     private async getRelatedTerms(term: string): Promise<string[]> {
         try {
+            const url = `https://api.bing.com/osjson.aspx?query=${term}`
+
             const request = {
-                url: `https://api.bing.com/osjson.aspx?query=${term}`,
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             }
 
-            const response = await axios(request)
+            const response = await axios(url, request)
 
             return response.data[1] as string[]
         } catch (error) {
             this.bot.log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
         }
         return []
-    }
-
-    private formatDate(date: Date): string {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-
-        return `${year}${month}${day}`
     }
 
     private async randomScroll(page: Page) {
@@ -291,6 +264,8 @@ export class Search extends Workers {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
+            // 不知道什么原因，有时候点击后，getLatestTab 获取到的不是刚刚点击跳转后的新页面，需要加延迟
+            await this.bot.utils.wait(2_000) 
             // Will get current tab if no new one is created, this will always be the visited site or the result page if it failed to click
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
@@ -298,7 +273,6 @@ export class Search extends Workers {
             await this.bot.utils.wait(10_000)
 
             let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we've visited
-
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
             while (lastTabURL.href !== this.searchPageURL && i < 5) {
@@ -310,7 +284,6 @@ export class Search extends Workers {
                 lastTabURL = new URL(lastTab.url()) // Get new tab info
                 i++
             }
-
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
         }
