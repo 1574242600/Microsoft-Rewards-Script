@@ -196,14 +196,14 @@ export class Search extends Workers {
 
     private async getTrends(geoLocale: string) {
         const queryTerms: string[] = []
-        const keywordSource = ['toutiaohot', 'baiduhot', 'zhihuhot', 'douyinhot']
+        const keywordSource = ['bilibili', 'baidu', 'zhihu', 'weibo', 'douyin']
         geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'UNKONWN'
 
         this.bot.log('SEARCH-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
         for (const keyword of keywordSource) {
             try {
-                const url = `https://tenapi.cn/v2/${keyword}`
+                const url = `https://api-hot.efefee.cn/${keyword}?cache=true`
                 const request = {
                     method: 'GET',
                     headers: {
@@ -213,9 +213,11 @@ export class Search extends Workers {
 
                 const response = await axios(url, request)
           
-                return response.data
+                return this.bot.utils.shuffleArray(   
+                    response.data
                     .data
-                    .map((item: { name: string }) => item.name) as string[]
+                    .map((item: { title: string }) => item.title)
+                ) as string[]
             } catch (error) {
                 this.bot.log('SEARCH-TRENDS', 'An error occurred:' + error, 'error')
             }
