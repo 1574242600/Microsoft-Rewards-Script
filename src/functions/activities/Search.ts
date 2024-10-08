@@ -136,8 +136,6 @@ export class Search extends Workers {
                     window.scrollTo(0, 0)
                 })
 
-                // Set it since params get added after visiting
-                this.searchPageURL = searchPage.url()
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
@@ -241,7 +239,7 @@ export class Search extends Workers {
 
             return response.data[1] as string[]
         } catch (error) {
-            this.bot.log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
+            this.bot.log('SEARCH-BING-RELATED', 'An error occurred:' + error, 'error')
         }
         return []
     }
@@ -265,15 +263,14 @@ export class Search extends Workers {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
-            // 不知道什么原因，有时候点击后，getLatestTab 获取到的不是刚刚点击跳转后的新页面，需要加延迟
-            await this.bot.utils.wait(2_000) 
+            // Stay for 10 seconds for page to load and "visit"
+            await this.bot.utils.wait(10_000)
+
             // Will get current tab if no new one is created, this will always be the visited site or the result page if it failed to click
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
-            // Stay for 10 seconds
-            await this.bot.utils.wait(10_000)
+            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we're visiting
 
-            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we've visited
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
             while (lastTabURL.href !== this.searchPageURL && i < 5) {
@@ -306,10 +303,10 @@ export class Search extends Workers {
             await this.bot.utils.wait(3000)
             this.searchPageURL = newPage.url()
 
-            // Else reset the last tab back to the search listing
+            // Else reset the last tab back to the search listing or Bing.com
         } else {
             lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
-            await lastTab.goto(this.searchPageURL)
+            await lastTab.goto(this.searchPageURL ?  this.searchPageURL : this.bingHome)
         }
     }
 
